@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Go Notes Pro</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 min-h-screen p-4 md:p-12">
+
+    <div class="max-w-3xl mx-auto">
+
+        <!-- HEADER -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-black text-slate-800 tracking-tight">
+                GO NOTES
+            </h1>
+
+            <p class="text-slate-500 mt-2">
+                Full-stack CRUD Application
+            </p>
+        </header>
+
+        <!-- FORM -->
+        <div class="bg-white p-6 rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 mb-10">
+
+            <h2 id="form-title"
+                class="text-sm font-bold uppercase tracking-wider text-blue-600 mb-4">
+                Create New Note
+            </h2>
+
+            <input type="hidden" id="note-id" />
+
+            <div class="space-y-4">
+
+                <input
+                    id="title"
+                    type="text"
+                    placeholder="Title"
+                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
+                />
+
+                <textarea
+                    id="content"
+                    placeholder="Write your note here..."
+                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl h-32 focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
+                ></textarea>
+
+                <div class="flex gap-3">
+
+                    <button
+                        id="save-btn"
+                        onclick="handleSave()"
+                        class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all shadow-lg shadow-blue-200"
+                    >
+                        Save Note
+                    </button>
+
+                    <button
+                        id="cancel-btn"
+                        onclick="resetForm()"
+                        class="hidden px-6 bg-slate-200 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-300 transition-all"
+                    >
+                        Cancel
+                    </button>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- SEARCH -->
+        <div class="mb-6">
+            <input
+                type="text"
+                id="search"
+                onkeyup="filterNotes()"
+                placeholder="Search notes..."
+                class="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+            />
+        </div>
+
+        <!-- NOTES -->
+        <div id="notes-list" class="grid gap-4">
+            <div class="text-center py-10 text-slate-400 italic">
+                Loading notes...
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+
+        // SAME SERVER API
+        const API_URL = '/notes';
+
+        let allNotes = [];
+
+        // FETCH NOTES
+        async function fetchNotes() {
+
+            const notesList = document.getElementById('notes-list');
+
+            try {
+
+                notesList.innerHTML =
+                    '<div class="text-center py-10 text-slate-400 italic">Loading notes...</div>';
+
+                const response = await fetch(API_URL);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch notes');
+                }
+
+                allNotes = await response.json();
+
+                renderNotes(allNotes);
+
+            } catch (error) {
+
+                console.error(error);
+
+                notesList.innerHTML =
+                    '<div class="text-red-500 text-center font-semibold">Failed to connect to backend.</div>';
+            }
+        }
+
+        // RENDER NOTES
+        function renderNotes(notesArray) {
+
+            const list = document.getElementById('notes-list');
+
+            if (!notesArray || notesArray.length === 0) {
+
+                list.innerHTML =
+                    '<div class="text-center py-10 text-slate-400">No notes found.</div>';
+
+                return;
+            }
+
+            list.innerHTML = '';
+
+            notesArray.forEach(note => {
+
+                const noteDiv = document.createElement('div');
+
+                noteDiv.className =
+                    "bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-start";
+
+                const safeTitle =
+                    (note.title || '').replace(/'/g, "\\'");
+
+                const safeContent =
+                    (note.content || '').replace(/'/g, "\\'");
+
+                noteDiv.innerHTML =
+
+                    '<div class="flex-1">' +
+
+                        '<h3 class="font-bold text-xl text-slate-800 break-words">' +
+                        (note.title || 'Untitled') +
+                        '</h3>' +
+
+                        '<p class="text-slate-600 mt-2 whitespace-pre-wrap break-words">' +
+                        (note.content || '') +
+                        '</p>' +
+
+                    '</div>' +
+
+                    '<div class="flex flex-col gap-2 ml-4">' +
+
+                        '<button onclick="prepareUpdate(' +
+                        note.id +
+                        ', \'' +
+                        safeTitle +
+                        '\', \'' +
+                        safeContent +
+                        '\')" class="p-2 px-4 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100">' +
+
+                        'Edit</button>' +
+
+                        '<button onclick="deleteNote(' +
+                        note.id +
+                        ')" class="p-2 px-4 bg-red-50 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100">' +
+
+                        'Delete</button>' +
+
+                    '</div>';
+
+                list.appendChild(noteDiv);
+            });
+        }
+
+        // CREATE / UPDATE
+        async function handleSave() {
+
+            const id = document.getElementById('note-id').value.trim();
+
+            const title = document.getElementById('title').value.trim();
+
+            const content = document.getElementById('content').value.trim();
+
+            if (!title || !content) {
+                alert("Please fill all fields");
+                return;
+            }
+
+            const method = id ? 'PUT' : 'POST';
+
+            const url = id
+                ? API_URL + '/' + id
+                : API_URL;
+
+            try {
+
+                const response = await fetch(url, {
+
+                    method: method,
+
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+
+                    body: JSON.stringify({
+                        title,
+                        content
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save note');
+                }
+
+                resetForm();
+
+                fetchNotes();
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert("Failed to save note");
+            }
+        }
+
+        // PREPARE UPDATE
+        function prepareUpdate(id, title, content) {
+
+            document.getElementById('note-id').value = id;
+
+            document.getElementById('title').value = title;
+
+            document.getElementById('content').value = content;
+
+            document.getElementById('form-title').innerText =
+                "Updating Note #" + id;
+
+            document.getElementById('save-btn').innerText =
+                "Update Note";
+
+            document.getElementById('save-btn').className =
+                "flex-1 bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200";
+
+            document.getElementById('cancel-btn').classList.remove('hidden');
+
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // RESET FORM
+        function resetForm() {
+
+            document.getElementById('note-id').value = '';
+
+            document.getElementById('title').value = '';
+
+            document.getElementById('content').value = '';
+
+            document.getElementById('form-title').innerText =
+                "Create New Note";
+
+            document.getElementById('save-btn').innerText =
+                "Save Note";
+
+            document.getElementById('save-btn').className =
+                "flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all shadow-lg shadow-blue-200";
+
+            document.getElementById('cancel-btn').classList.add('hidden');
+        }
+
+        // DELETE NOTE
+        async function deleteNote(id) {
+
+            const confirmed = confirm("Delete this note?");
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+
+                const response = await fetch(API_URL + '/' + id, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Delete failed');
+                }
+
+                fetchNotes();
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert("Failed to delete note");
+            }
+        }
+
+        // SEARCH NOTES
+        function filterNotes() {
+
+            const query =
+                document.getElementById('search')
+                .value
+                .toLowerCase();
+
+            const filtered = allNotes.filter(note => {
+
+                const title =
+                    (note.title || '').toLowerCase();
+
+                const content =
+                    (note.content || '').toLowerCase();
+
+                return (
+                    title.includes(query) ||
+                    content.includes(query)
+                );
+            });
+
+            renderNotes(filtered);
+        }
+
+        // INITIAL FETCH
+        fetchNotes();
+
+    </script>
+
+</body>
+</html>
