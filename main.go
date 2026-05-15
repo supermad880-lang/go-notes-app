@@ -18,8 +18,10 @@ func main() {
 	// ALIASES: This solves the 404 errors from your logs
 	// It maps the "hidden" names browsers look for to your actual file
 	router.StaticFile("/favicon.ico", "./static/logo.png")
-	router.StaticFile("/apple-touch-logo.png", "./static/logo.png")
+	router.StaticFile("/apple-touch-icon.png", "./static/logo.png")
 	router.StaticFile("/apple-touch-icon-precomposed.png", "./static/logo.png")
+	router.StaticFile("/apple-touch-icon.png", "./static/logo.png")
+	router.StaticFile("/apple-touch-icon-120x120.png", "./static/logo.png")
 
 	router.GET("/", func(c *gin.Context) {
 		c.File("./static/index.html")
