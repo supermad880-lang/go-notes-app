@@ -7,12 +7,11 @@
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "orientation": "portrait",
-  "icons": [
+"icons": [
     {
-      "src": "/icon.png",
+      "src": "/static/icon.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
