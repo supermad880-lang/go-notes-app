@@ -3,6 +3,7 @@ package main
 import (
 	"api/config"
 	"api/routes"
+	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -14,18 +15,21 @@ func main() {
 
 	router := gin.Default()
 
-	// Serve frontend
-	router.StaticFile("/", "./static/index.html")
+	router.Static("/", "./static")
 
-	// API routes
+	router.GET("/", func(c *gin.Context) {
+		c.File("./static/index.html")
+	})
+
 	routes.Routes(router)
 
-	// Railway dynamic port
 	port := os.Getenv("PORT")
 
 	if port == "" {
 		port = "8080"
 	}
+
+	log.Println("Server running on port", port)
 
 	router.Run(":" + port)
 }
