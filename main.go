@@ -3,42 +3,33 @@ package main
 import (
 	"api/config"
 	"api/routes"
-	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// Initialize database connection
 	config.Connect()
-
 	router := gin.Default()
 
-	// 1. SERVE STATIC FILES
-	// This maps the URL path "/static" to your physical directory "./static".
-	// This is essential for the browser to find icon.png.
+	// Serve your static folder
 	router.Static("/static", "./static")
 
-	// 2. SERVE THE ENTRY POINT
-	// This handles the root URL and serves your HTML file.
+	// ALIASES: This solves the 404 errors from your logs
+	// It maps the "hidden" names browsers look for to your actual file
+	router.StaticFile("/favicon.ico", "./static/logo.png")
+	router.StaticFile("/apple-touch-logo.png", "./static/logo.png")
+	router.StaticFile("/apple-touch-icon-precomposed.png", "./static/logo.png")
+
 	router.GET("/", func(c *gin.Context) {
 		c.File("./static/index.html")
 	})
 
-	// 3. INITIALIZE API ROUTES
-	// Loads your existing routes for notes, banking, or travel logic.
 	routes.Routes(router)
 
-	// 4. CONFIGURE PORT FOR RAILWAY
-	// Railway provides the port dynamically via environment variables.
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // Fallback for local development
+		port = "8080"
 	}
-
-	log.Println("Server running on port", port)
-
-	// Start the server
 	router.Run(":" + port)
 }
